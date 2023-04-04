@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/tauri";
 import "./App.css";
 
 function App() {
-  function Square({ value, onSquareClick }) {
+  function Square({ value, onSquareClick }: { value: string; onSquareClick: () => void }) {
   return (
     <button className="square" onClick={onSquareClick}>
       {value}
@@ -12,8 +12,8 @@ function App() {
   );
 }
 
-function Board({ xIsNext, squares, onPlay }) {
-  function handleClick(i) {
+function Board({ xIsNext, squares, onPlay }: { xIsNext: boolean; squares: string[]; onPlay: (nextSquares: string[]) => void }) {
+  function handleClick(i: number) {
     if (calculateWinner(squares) || squares[i]) {
       return;
     }
@@ -62,13 +62,13 @@ function Game() {
   const xIsNext = currentMove % 2 === 0;
   const currentSquares = history[currentMove];
 
-  function handlePlay(nextSquares) {
+  function handlePlay(nextSquares: string[]) {
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
     setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
   }
 
-  function jumpTo(nextMove) {
+  function jumpTo(nextMove: number) {
     setCurrentMove(nextMove);
   }
 
@@ -98,7 +98,7 @@ function Game() {
   );
 }
 
-function calculateWinner(squares) {
+function calculateWinner(squares: string[]) {
   const lines = [
     [0, 1, 2],
     [3, 4, 5],
