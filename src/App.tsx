@@ -12,9 +12,9 @@ function App() {
   );
 }
 
-function Board({ xIsNext, squares, onPlay }: { xIsNext: boolean; squares: string[]; onPlay: (nextSquares: string[]) => void }) {
+function Board({ xIsNext, squares, winner, onPlay }: { xIsNext: boolean; squares: string[]; winner: string, onPlay: (nextSquares: string[]) => void }) {
   function handleClick(i: number) {
-    if (calculateWinner(squares) || squares[i]) {
+    if (winner !== '' || squares[i]) {
       return;
     }
     const nextSquares = squares.slice();
@@ -26,17 +26,8 @@ function Board({ xIsNext, squares, onPlay }: { xIsNext: boolean; squares: string
     onPlay(nextSquares);
   }
 
-  const winner = calculateWinner(squares);
-  let status;
-  if (winner) {
-    status = 'Winner: ' + winner;
-  } else {
-    status = 'Next player: ' + (xIsNext ? 'X' : 'O');
-  }
-
   return (
     <>
-      <div className="status">{status}</div>
       <div className="board-row">
         <Square value={squares[0]} onSquareClick={() => handleClick(0)} />
         <Square value={squares[1]} onSquareClick={() => handleClick(1)} />
@@ -56,11 +47,24 @@ function Board({ xIsNext, squares, onPlay }: { xIsNext: boolean; squares: string
   );
 }
 
+function Status({ winner, xIsNext }: { winner: string, xIsNext: boolean}) {
+  let status;
+  if (winner) {
+    status = 'Winner: ' + winner;
+  } else {
+    status = 'Next player: ' + (xIsNext ? 'X' : 'O');
+  }
+  return (
+    <div className="status">{status}</div>
+  );
+}
+
 function Game() {
   const [history, setHistory] = useState([Array(9).fill(null)]);
   const [currentMove, setCurrentMove] = useState(0);
   const xIsNext = currentMove % 2 === 0;
   const currentSquares = history[currentMove];
+  const winner = calculateWinner(currentSquares);
 
   function handlePlay(nextSquares: string[]) {
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
@@ -89,7 +93,8 @@ function Game() {
   return (
     <div className="game">
       <div className="game-board">
-        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+        <Status winner={winner} xIsNext={xIsNext} />
+        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} winner={winner}/>
       </div>
       <div className="game-info">
         <ol>{moves}</ol>
@@ -115,7 +120,7 @@ function calculateWinner(squares: string[]) {
       return squares[a];
     }
   }
-  return null;
+  return '';
 }
 
   return (
