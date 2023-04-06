@@ -1,9 +1,71 @@
-import { useEffect, useState } from "react";
+import { Reducer, useEffect, useReducer, useState } from "react";
 import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/tauri";
 import "./App.css";
+import { AsyncActionHandlers, useReducerAsync } from "use-reducer-async";
+
+type State = {
+  history: string[][],
+  currentMove: number,
+  winner: string,
+};
+
+const initialState: State = {
+  history: [Array(9).fill('')],
+  currentMove: 0,
+  winner: '',
+};
+
+type Action =
+  | { type: 'play', nextSquares: string[] }
+  | { type: 'winner', currentSquares: string[] }
+  | { type: 'setWinner', nextWinner: string }
+  | { type: 'jumpTo', nextMove: number };
+
+type AsyncAction = 
+  | { type: 'TAP', nextSquares: string[] };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'play':
+      console.log('普通のplayだよ');
+      const nextHistory = [...state.history.slice(0, state.currentMove + 1), action.nextSquares];
+      return {
+        history: nextHistory,
+        currentMove: nextHistory.length - 1,
+        winner: '',
+      };
+    case 'winner':
+      return state;
+    case 'setWinner':
+      console.log('winner');
+      console.log(state);
+      return {
+        ...state,
+        winner: action.nextWinner,
+      };
+
+    case 'jumpTo':
+      return {
+        ...state,
+        currentMove: action.nextMove,
+      };
+    default:
+      throw new Error();
+  }
+}
+
+const asyncActionHandlers: AsyncActionHandlers<Reducer<any, any>, AsyncAction> = {
+  TAP: ({ dispatch }) => async (action: AsyncAction) => {
+    console.log('asyncからのplayだよ');
+    dispatch({ type: 'play', nextSquares: action.nextSquares });
+    const nextWinner: string = await invoke('calculate_winner', { squares: action.nextSquares });
+    dispatch({ type: 'setWinner', nextWinner });
+  }
+}
 
 function App() {
+  const [state, dispatch] = useReducerAsync(reducer, initialState, asyncActionHandlers);
   function Square({ value, onSquareClick }: { value: string; onSquareClick: () => void }) {
     return (
       <button className="square" onClick={onSquareClick}>
@@ -60,25 +122,11 @@ function App() {
   }
 
   function Game() {
-    const [history, setHistory] = useState([Array(9).fill('')]);
-    const [currentMove, setCurrentMove] = useState(0);
-    const [winner, setWinner] = useState('');
-    const xIsNext = currentMove % 2 === 0;
-    const currentSquares = history[currentMove];
+    console.log('Game');
+    const xIsNext = state.currentMove % 2 === 0;
+    const currentSquares = state.history[state.currentMove];
 
-    async function handlePlay(nextSquares: string[]) {
-      const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
-      setHistory(nextHistory);
-      setCurrentMove(nextHistory.length - 1);
-      const nextwinner: string = await invoke('calculate_winner', { squares: nextSquares });
-      setWinner(nextwinner);
-    }
-
-    function jumpTo(nextMove: number) {
-      setCurrentMove(nextMove);
-    }
-
-    const moves = history.map((squares, move) => {
+    const moves = state.history.map((_squares, move: number) => {
       let description;
       if (move > 0) {
         description = 'Go to move #' + move;
@@ -87,7 +135,7 @@ function App() {
       }
       return (
         <li key={move}>
-          <button onClick={() => jumpTo(move)}>{description}</button>
+          <button onClick={() => dispatch({ type: 'jumpTo', nextMove: move})}>{description}</button>
         </li>
       );
     });
@@ -95,8 +143,8 @@ function App() {
     return (
       <div className="game">
         <div className="game-board">
-          <Status winner={winner} xIsNext={xIsNext} />
-          <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} winner={winner} />
+          <Status winner={state.winner} xIsNext={xIsNext} />
+          <Board xIsNext={xIsNext} squares={currentSquares} onPlay={(nextSquares: string[]) => dispatch({ type: 'TAP', nextSquares: nextSquares})} winner={state.winner} />
         </div>
         <div className="game-info">
           <ol>{moves}</ol>
